@@ -1,0 +1,93 @@
+---
+title: "Practical ML Project"
+author: "Abraham JA"
+date: "28/6/2020"
+output: html_document
+---
+# Project Goal
+
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. I may use any of the other variables to predict with.
+
+# How I did the model
+
+First of all, we delete names, ids and all the variables with no value to use in the prediction, also we need to delete all the predictors with variance near to zero. Finally, we drop out all the variables with many NAs (based on some criteria). 
+
+```{r setup, include=FALSE}
+
+library(dplyr)
+library(caret)
+library(randomForest)
+
+setwd("~/Courses")
+df <- read.csv("pml-training.csv")
+df <- df[,-c(1:5)]
+nsv <- nearZeroVar(df, saveMetrics = T)
+df <- df[,nsv$nzv==F]
+
+NA_index <- sapply(1:ncol(df), function(k) { sum(is.na(df[,k])) })
+
+df <- df[,-which(NA_index/dim(df)[1]>0.5)]
+
+```
+
+# Model
+
+Random Forest is a well known algorithm it can be applied to classification problems. We will apply that algorithm to our problem. First, we get the training and test data sets (80% - 20%). We can use the caret package to find a good combination of hyperparameters using 5-fold cross validation in order to increase our classification accuracy. The dataset is big so the training time will be high, for that reason we will only train three different models with mtry (Number of variables randomly sampled as candidates at each split) equal to 3,5 and 8.
+
+```{r,echo=FALSE}
+############ Random Forest 
+
+set.seed(1)
+i <- sample(1:dim(df)[1],floor(0.8*dim(df)[1]))
+df.train <- df[i,]
+df.test <- df[-i,]
+
+cv <- trainControl(method="cv", number=5, search="grid")
+mtry <- expand.grid(.mtry=seq(2,ceiling(sqrt(ncol(df.train))),3))
+
+set.seed(2)
+mtry_eval <- caret::train(classe ~ ., data = df.train, 
+                          method="rf", 
+                          tuneGrid= mtry, 
+                          trControl= cv,
+                          metric = "Kappa",
+                          na.action = na.roughfix)
+
+print(mtry_eval)
+
+```
+
+Based on the previous results and where we are taking kappa as our metric to maximize because this is a classification problem not binary, we select mtry = 8 to make the predictions in our test data set and get an expected kappa (accuracy) to the validation data set.
+
+```{r,echo=FALSE}
+
+modelo.arbol.rf <- randomForest(classe ~ ., data = df.train, 
+                                mtry = ceiling(sqrt(ncol(df.train))),
+                                importance = TRUE,
+                                #maxnodes = 1000,
+                                ntree = 50,
+                                na.action = na.roughfix)
+
+plot(modelo.arbol.rf, col = "firebrick")
+varImpPlot(modelo.arbol.rf)
+
+pred.arbol <- predict(object = modelo.arbol.rf, newdata = df.test, type = "class")
+caret::confusionMatrix(xtabs(~pred.arbol + df.test[,c("classe")]))
+
+```
+
+We can see a very good performace in the classification task with this algorithm (about 99% accuracy). Finally, we use the validation data set to predict a submit our results.
+
+```{r,echo=FALSE}
+
+df_test <- read.csv("pml-testing.csv")
+df_test <- df_test[,-c(1:5)]
+df_test <- df_test[,nsv$nzv==F]
+
+df_test <- df_test[,-which(NA_index/dim(df)[1]>0.5)]
+
+pred.arbol_test <- predict(object = modelo.arbol.rf, newdata = df_test, type = "class")
+pred.arbol_test
+
+```
+
