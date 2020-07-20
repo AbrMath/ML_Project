@@ -1,0 +1,29 @@
+---
+title: "Maps with Leaflet"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## 18/07/2020
+
+```{r,message=FALSE,warning=FALSE}
+
+library(leaflet)
+
+mxIcon <- makeIcon(
+iconUrl = "https://upload.wikimedia.org/wikipedia/commons/6/62/Mexican_flag.png",
+iconWidth = 20, iconHeight = 15)
+
+
+df <- data.frame(lat=18.686124+rnorm(10),
+                 lng=-100.606943+rnorm(10))
+
+my_map <- df %>% leaflet() %>% addTiles() %>% 
+    addMarkers(icon = mxIcon)
+
+my_map
+
+```
