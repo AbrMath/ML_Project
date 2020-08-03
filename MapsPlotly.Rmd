@@ -1,0 +1,36 @@
+---
+title: "Plotly Example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## 27/07/2020
+
+```{r,message=FALSE,warning=FALSE}
+
+library(plotly)
+library(rnaturalearth)
+
+df_mexico <- ne_states(country = "Mexico", returnclass = "sf")
+df_mexico$KPI <- sample(1:10,33,replace = T)
+
+plot_ly(stroke = I("black"), span = I(1)) %>% 
+  add_sf(
+    data = df_mexico, 
+    color = I("gray95"),
+    hoverinfo = "none"
+  ) %>%
+  add_sf(
+    data = df_mexico, 
+    color = ~KPI,
+    split = ~name, 
+    text = ~paste(name, KPI), 
+    hoverinfo = "text", 
+    hoveron = "fills"
+  ) %>%
+  layout(showlegend = FALSE)
+
+```
